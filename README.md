@@ -1,8 +1,8 @@
-## pycronofy ##
+## pycronofy - (Casepeer fork) ##
 
 [![Build Status](https://travis-ci.org/venuebook/pycronofy.svg?branch=master)](https://travis-ci.com/venuebook/pycronofy)
 
-A python library for [Cronofy](http://www.cronofy.com)
+A python library for [Cronofy](http://www.cronofy.com) --  forked by and for __CasePeer__
 
 Inspired by [Cronofy-Ruby](https://github.com/cronofy/cronofy-ruby)
 
