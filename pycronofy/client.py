@@ -11,6 +11,12 @@ class Client(object):
     Performs authentication, and wraps API: https://www.cronofy.com/developers/api/
     """
 
+    def _return_correct_response(self,response,response_key):
+        return response.json()[response_key] if response.ok else response.status_code
+
+    def _good_request(self,endpoint,method='get',*args,**kwargs):
+        return self._return_correct_response(getattr(self.request_handler,method)(endpoint=endpoint,*args,**kwargs),endpoint)
+
     def __init__(self, client_id=None, client_secret=None, access_token=None, refresh_token=None, token_expiration=None):
         """
         Example Usage:
@@ -33,15 +39,17 @@ class Client(object):
         :return: Account data.
         :rtype: ``dict``
         """
-        return self.request_handler.get(endpoint='account').json()['account']
-
+        endpoint = 'account'        
+        return self._good_request(endpoint)
+        
     def close_notification_channel(self, channel_id):
         """Close a notification channel to stop push notifications from being sent.
 
         :param string channel_id: The id of the notification channel.
-        """
-        self.request_handler.delete(endpoint='channels/%s' % channel_id)
-
+        :rtype: ``int`` STATUS CODE
+        """                
+        return self.request_handler.delete(endpoint = 'channels/{}'.format(channel_id)).status_code
+        
     def create_notification_channel(self, callback_url, calendar_ids=()):
         """Create a new channel for receiving push notifications.
 
@@ -51,20 +59,20 @@ class Client(object):
         :return: Channel id and channel callback
         :rtype: ``dict``
         """
+        endpoint = 'channels'
         data = {'callback_url': callback_url}
         if calendar_ids:
             data['filters'] = {'calendar_ids':calendar_ids}
-        return self.request_handler.post('channels', data=data).json()['channel']
+        return self._good_request(endpoint,method='post',data=data)        
 
     def delete_all_events(self, calendar_ids=()):
         """Deletes all events managed through Cronofy from the all of the user's calendars.
 
         :param tuple calendar_ids: List of calendar ids to delete events for. (Optional. Default empty tuple)
         """
-        params={'delete_all': True}
-        if calendar_ids:
-            params = {'calendar_ids[]': calendar_ids}
-        self.request_handler.delete(endpoint='events', params=params)
+        endpoint = 'events'
+        params = dict( delete_all = True ) if not len(calendar_ids) else {'calendar_ids[]': calendar_ids }            
+        return self._good_request(endpoint,method='delete',params=params)
 
     def delete_event(self, calendar_id, event_id):
         """Delete an event from the specified calendar.
@@ -72,7 +80,9 @@ class Client(object):
         :param string calendar_id: ID of calendar to insert/update event into.
         :param string event_id: ID of event to delete.
         """
-        self.request_handler.delete(endpoint='calendars/%s/events' % calendar_id, params={'event_id': event_id})
+        endpoint = 'calendars/{}/events'.format(calendar_id)
+        params = {'event_id': event_id}
+        return self._good_request(endpoint,method='delete',params=params)
 
     def get_authorization_from_code(self, code, redirect_uri=''):
         """Updates the authorization tokens from the user provided code.
@@ -111,7 +121,7 @@ class Client(object):
         :rtype: ``bool``
         """
         if not self.auth.token_expiration:
-            return True
+            return False
         return (datetime.datetime.utcnow() > self.auth.token_expiration)
 
     def list_calendars(self):
@@ -120,7 +130,8 @@ class Client(object):
         :return: List of calendars (dictionaries).
         :rtype: ``list``
         """
-        return self.request_handler.get(endpoint='calendars').json()['calendars']
+        endpoint = 'calendars'
+        return self._good_request(endpoint=endpoint)        
 
     def list_profiles(self):
         """Get list of active user's calendar profiles.
@@ -128,7 +139,8 @@ class Client(object):
         :return: Calendar profiles.
         :rtype: ``list``
         """
-        return self.request_handler.get(endpoint='profiles').json()['profiles']
+        endpoint = 'profiles'
+        return self._good_request(endpoint=endpoint)        
 
     def list_notification_channels(self):
         """Return a list of notification channels available for the active account.
@@ -136,7 +148,8 @@ class Client(object):
         :return: List of notification channels (dictionaries).
         :rtype: ``list``
         """
-        return self.request_handler.get(endpoint='channels').json()['channels']
+        endpoint = 'channels'
+        return self._good_request(endpoint=endpoint)
 
     def read_events(self,
         calendar_ids=(),
@@ -166,7 +179,8 @@ class Client(object):
         :return: Wrapped results (Containing first page of events).
         :rtype: ``Pages``
         """
-        results = self.request_handler.get(endpoint='events', params={
+        endpoint = 'events'
+        params = {
             'tzid': tzid,
             'calendar_ids[]':calendar_ids,
             'from': get_iso8601_string(from_date),
@@ -177,8 +191,9 @@ class Client(object):
             'include_deleted': include_deleted,
             'include_moved': include_moved,
             'localized_times': localized_times,
-        }).json()
-        return Pages(self.request_handler, results, 'events', automatic_pagination)
+        }
+        return self._good_request(endpoint=endpoint,params=params)
+        #return Pages(self.request_handler, results, 'events', automatic_pagination)
 
     def read_free_busy(self,
         calendar_ids=(),
@@ -201,15 +216,17 @@ class Client(object):
         :return: Wrapped results (Containing first page of free/busy blocks).
         :rtype: ``Pages``
         """
-        results = self.request_handler.get(endpoint='free_busy', params={
+        endpoint = 'free_busy'
+        params = {
             'tzid': tzid,
             'calendar_ids[]':calendar_ids,
             'from': get_iso8601_string(from_date),
             'to': get_iso8601_string(to_date),
             'include_managed': include_managed,
             'localized_times': localized_times,
-        }).json()
-        return Pages(self.request_handler, results, 'free_busy', automatic_pagination)
+        }
+        return self._good_request(endpoint=endpoint,params=params)
+        #return Pages(self.request_handler, results, 'free_busy', automatic_pagination)
 
     def refresh_authorization(self):
         """Refreshes the authorization tokens.
@@ -263,7 +280,8 @@ class Client(object):
         """
         event['start'] = get_iso8601_string(event['start'])
         event['end'] = get_iso8601_string(event['end'])
-        self.request_handler.post(endpoint='calendars/%s/events' % calendar_id, data=event)
+        endpoint = 'calendars/{}/events'.format(calendar_id)
+        return self._good_request(endpoint=endpoint, data=event)        
 
     def user_auth_link(self, redirect_uri, scope='', state='', avoid_linking=False):
         """Generates a URL to send the user for OAuth 2.0

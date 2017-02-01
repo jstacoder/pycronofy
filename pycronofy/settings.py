@@ -11,9 +11,12 @@ DEFAULT_OAUTH_SCOPE = (
     'list_calendars',
     'read_events', 
     'create_event',
+    #'event_reminders',
     'delete_event',
+    'create_calendar',
+    #'change_participation_status',
     # 'read_free_busy', # implicitly included by 'read_events'
-    )
+)
 
 # Default Timezone ID (used in read_events)
 DEFAULT_TIMEZONE_ID = 'Etc/UTC'
