@@ -145,7 +145,7 @@ def test_read_free_busy(client):
         status = 200,
         body = json.dumps(dict(free_busy=[]))
     )
-    response = client.read_events()
+    response = client.read_free_busy()
     assert response == []
 
 
