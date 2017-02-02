@@ -11,13 +11,53 @@ class Client(object):
     Performs authentication, and wraps API: https://www.cronofy.com/developers/api/
     """
 
-    def _return_correct_response(self,response,response_key):
-        return response.json()[response_key] if response.ok else response.status_code
+    def _return_correct_response(
+        self,
+        response,
+        response_key,
+        only_return_ok=None,
+        only_return_status_code=None
+    ):        
+        return \
+        (
+            response.json()[response_key]\
+            if response.ok\
+            else response.status_code
+        )\
+        if not (only_return_ok or only_return_status_code) else\
+            (response.ok if only_return_ok else response.status_code)
 
-    def _good_request(self,endpoint,method='get',*args,**kwargs):
-        return self._return_correct_response(getattr(self.request_handler,method)(endpoint=endpoint,*args,**kwargs),endpoint)
+    def _good_request(
+        self,
+        endpoint,
+        method='get',
+        url=None,
+        only_return_ok=None,
+        only_return_status_code=None,        
+        *args,
+        **kwargs
+        ):
+        return self._return_correct_response(
+            getattr(
+                self.request_handler,method
+            )(
+                endpoint=url or endpoint,
+                *args,
+                **kwargs
+            ),
+            endpoint, 
+            only_return_ok=only_return_ok,
+            only_return_status_code=only_return_status_code
+        )
 
-    def __init__(self, client_id=None, client_secret=None, access_token=None, refresh_token=None, token_expiration=None):
+    def __init__(
+        self, 
+        client_id=None, 
+        client_secret=None, 
+        access_token=None, 
+        refresh_token=None, 
+        token_expiration=None
+    ):
         """
         Example Usage:
 
@@ -40,7 +80,7 @@ class Client(object):
         :rtype: ``dict``
         """
         endpoint = 'account'        
-        return self._good_request(endpoint)
+        return self._good_request(endpoint,only_return_ok=True)
         
     def close_notification_channel(self, channel_id):
         """Close a notification channel to stop push notifications from being sent.
@@ -72,7 +112,7 @@ class Client(object):
         """
         endpoint = 'events'
         params = dict( delete_all = True ) if not len(calendar_ids) else {'calendar_ids[]': calendar_ids }            
-        return self._good_request(endpoint,method='delete',params=params)
+        return self._good_request(endpoint,method='delete',params=params,only_return_status_code=True)
 
     def delete_event(self, calendar_id, event_id):
         """Delete an event from the specified calendar.
@@ -82,7 +122,7 @@ class Client(object):
         """
         endpoint = 'calendars/{}/events'.format(calendar_id)
         params = {'event_id': event_id}
-        return self._good_request(endpoint,method='delete',params=params)
+        return self._good_request(endpoint,method='delete',data=params, only_return_status_code=True)
 
     def get_authorization_from_code(self, code, redirect_uri=''):
         """Updates the authorization tokens from the user provided code.
@@ -121,7 +161,7 @@ class Client(object):
         :rtype: ``bool``
         """
         if not self.auth.token_expiration:
-            return False
+            return True
         return (datetime.datetime.utcnow() > self.auth.token_expiration)
 
     def list_calendars(self):
@@ -280,8 +320,9 @@ class Client(object):
         """
         event['start'] = get_iso8601_string(event['start'])
         event['end'] = get_iso8601_string(event['end'])
-        endpoint = 'calendars/{}/events'.format(calendar_id)
-        return self._good_request(endpoint=endpoint, data=event)        
+        endpoint = 'events'
+        url = 'calendars/{}/events'.format(calendar_id)
+        return self._good_request(endpoint=endpoint, url=url, data=event, method="post", only_return_ok=True)        
 
     def user_auth_link(self, redirect_uri, scope='', state='', avoid_linking=False):
         """Generates a URL to send the user for OAuth 2.0
