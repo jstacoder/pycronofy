@@ -138,7 +138,7 @@ def test_read_events(client):
 def test_read_free_busy(client):
     responses.add(
         responses.GET,
-        url = "{}/{}/free_busy".format(
+        url = "{}/{}/events".format(
             settings.API_BASE_URL,
             settings.API_VERSION            
         ),
