@@ -88,7 +88,10 @@ class Client(object):
         :param string channel_id: The id of the notification channel.
         :rtype: ``int`` STATUS CODE
         """                
-        return self.request_handler.delete(endpoint = 'channels/{}'.format(channel_id)).status_code
+        endpoint = 'channels/{0}'.format(channel_id)
+        return self._good_request(endpoint, method='delete',only_return_status_code=True)
+        #return self.request_handler.delete(endpoint = 'channels/{}'.format(channel_id)).status_code
+
         
     def create_notification_channel(self, callback_url, calendar_ids=()):
         """Create a new channel for receiving push notifications.
