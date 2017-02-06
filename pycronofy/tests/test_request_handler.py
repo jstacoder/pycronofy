@@ -95,3 +95,16 @@ def test_unauthorized(request_handler):
     with pytest.raises(Exception) as exception_info:
         response = request_handler.get(endpoint='events')
     assert exception_info.typename == 'PyCronofyRequestError'
+
+@responses.activate
+def test_unauthorized_post(request_handler):
+    """
+	Test RequestHandler.post handleing exceptions
+    """
+    args = deepcopy(TEST_EVENTS_ARGS)
+    args['status'] = 403
+    responses.add(method=responses.POST,**args)
+    with pytest.raises(Exception) as exception_info:
+        response = request_handler.post(endpoint='events')
+    print exception_info.value
+    assert exception_info.typename == 'PyCronofyRequestError'
