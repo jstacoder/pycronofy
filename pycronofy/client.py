@@ -1,10 +1,10 @@
 import datetime
-from pycronofy import settings
-from pycronofy.auth import Auth
-from pycronofy.datetime_utils import get_iso8601_string
-from pycronofy.pagination import Pages
-from pycronofy.request_handler import RequestHandler
-from pycronofy.validation import validate
+from . import settings
+from .auth import Auth
+from .datetime_utils import get_iso8601_string
+from .pagination import Pages
+from .request_handler import RequestHandler
+from .validation import validate
 
 class Client(object):
     """Client for cronofy web service.
@@ -16,24 +16,36 @@ class Client(object):
         response,
         response_key,
         only_return_ok=None,
-        only_return_status_code=None
-    ):        
-        return \
+        only_return_status_code=None,
+        return_full_response=None,
+    ):   
+        if return_full_response:
+            return response
+        if only_return_ok:
+            return response.ok
+        if only_return_status_code:
+            return response.status_code
+        return     response.json()[response_key]    
+        """return \
         (
             response.json()[response_key]\
-            if response.ok\
-            else response.status_code
+            if response.ok and not return_full_response\
+            else (
+                (response.status_code if only_return_status_code else response)
+            )
         )\
-        if not (only_return_ok or only_return_status_code) else\
-            (response.ok if only_return_ok else response.status_code)
+        if not (only_return_ok or only_return_status_code or return_full_response) else\
+            (response.ok if only_return_ok else (response.status_code if only_return_status_code else response))
+        """
 
     def _good_request(
         self,
-        endpoint,
+        endpoint=None,
         method='get',
         url=None,
         only_return_ok=None,
-        only_return_status_code=None,        
+        only_return_status_code=None,
+        return_full_response=None,        
         *args,
         **kwargs
         ):
@@ -47,7 +59,8 @@ class Client(object):
             ),
             endpoint, 
             only_return_ok=only_return_ok,
-            only_return_status_code=only_return_status_code
+            only_return_status_code=only_return_status_code,
+            return_full_response=return_full_response,
         )
 
     def __init__(
@@ -155,6 +168,7 @@ class Client(object):
             'access_token': self.auth.access_token,
             'refresh_token': self.auth.refresh_token,
             'token_expiration': get_iso8601_string(self.auth.token_expiration),
+            'expires_in': data['expires_in'],
         }
 
     def is_authorization_expired(self):
@@ -194,6 +208,27 @@ class Client(object):
         endpoint = 'channels'
         return self._good_request(endpoint=endpoint)
 
+    def get_all_events(self,current=None,total=None,next=None,events=None,params=None):
+        events = [] if events is None else events
+        endpoint = 'events'
+        if current is None and total is None:
+            # on first run, so send initial request with query 
+            # params and set values for current, total and next        
+            response = self.read_events(return_full_response=True,**params)
+        else:                            
+            if current < total:
+                response = self._good_request(url=next.split("v1")[1],return_full_response=True)
+            else:
+                return events                
+        data = response.json()
+        data_events = data.get("events") if data.get("events") is not None else []
+        page_data = data['pages']
+        current, total = page_data['current'],page_data['total']
+        next_page = page_data.get("next_page")
+        events += data_events
+        return self.get_all_events(current=current,total=total,next=next_page,events=events)
+            
+
     def read_events(self,
         calendar_ids=(),
         from_date=None,
@@ -205,7 +240,8 @@ class Client(object):
         include_deleted=False,
         include_moved=False,
         localized_times=False,
-        automatic_pagination=True):
+        automatic_pagination=True,
+        return_full_response=True):
         """Read events for linked account (optionally for the specified calendars).
 
         :param tuple calendar_ids: Tuple or list of calendar ids to pass to cronofy. (Optional).
@@ -235,7 +271,7 @@ class Client(object):
             'include_moved': include_moved,
             'localized_times': localized_times,
         }
-        return self._good_request(endpoint=endpoint,params=params)
+        return self._good_request(endpoint=endpoint,params=params,return_full_response=return_full_response)
         #return Pages(self.request_handler, results, 'events', automatic_pagination)
 
     def read_free_busy(self,
@@ -341,7 +377,7 @@ class Client(object):
         if not scope:
             scope = ' '.join(settings.DEFAULT_OAUTH_SCOPE)
         self.auth.update(redirect_uri=redirect_uri)
-        response = self.request_handler.get(
+        return self.request_handler.generate_url(
             url='%s/oauth/authorize' % settings.APP_BASE_URL,
             params={
                 'response_type': 'code',
@@ -352,7 +388,7 @@ class Client(object):
                 'avoid_linking': avoid_linking,
             }
         )
-        return response.url
+
 
     def validate(self, method, *args, **kwargs):
         """Validate authentication and values passed to the specified method.
@@ -365,3 +401,12 @@ class Client(object):
         validate(method, self.auth, *args, **kwargs)
 
 
+
+
+if __name__ == "__main__":
+    from pytz import timezone
+    tzid = timezone("America/Los_Angeles")
+    client = Client(access_token="RIp66VxLIumjJmNty2wGk81MSqSooDAP")
+    params = dict(tzid=tzid,include_deleted=True)
+    events = client.get_all_events(params=params)
+    print events     

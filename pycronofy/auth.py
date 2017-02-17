@@ -1,5 +1,5 @@
 import datetime
-from pycronofy import settings
+from . import settings
 
 class Auth(object):
     """

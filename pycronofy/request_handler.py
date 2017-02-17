@@ -1,7 +1,14 @@
 import requests
-import pycronofy
-from pycronofy import settings
-from pycronofy.exceptions import PyCronofyRequestError
+
+from . import settings
+from .exceptions import PyCronofyRequestError
+
+try:
+    import pycronofy
+except ImportError:
+    class pycronofy(object):
+        __name__ = "pycronofy"
+        __version__ = "1.0.0"
 
 class RequestHandler(object):
     """Wrap all request handling."""
@@ -12,6 +19,10 @@ class RequestHandler(object):
         """
         self.auth = auth
         self.user_agent = '%s %s' % (pycronofy.__name__, pycronofy.__version__)
+
+    def generate_url(self, *args, **kwargs):
+        req = requests.Request(*args,**kwargs)
+        return req.prepare().url
 
     def get(self, endpoint='', url='', params=None):
         """Perform a get for a json API endpoint.
