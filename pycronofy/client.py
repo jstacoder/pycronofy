@@ -307,7 +307,7 @@ class Client(object):
         return self._good_request(endpoint=endpoint,params=params)
         #return Pages(self.request_handler, results, 'free_busy', automatic_pagination)
 
-    def refresh_authorization(self):
+    def refresh_authorization(self, refresh_token=None):
         """Refreshes the authorization tokens.
 
         :return: Dictionary containing auth tokens, expiration info, and response status.
@@ -319,7 +319,7 @@ class Client(object):
                 'grant_type': 'refresh_token',
                 'client_id': self.auth.client_id,
                 'client_secret': self.auth.client_secret,
-                'refresh_token': self.auth.refresh_token,
+                'refresh_token': refresh_token or self.auth.refresh_token,
             }
         )
         data = response.json()
