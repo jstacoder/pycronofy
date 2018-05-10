@@ -18,14 +18,14 @@ class Client(object):
         only_return_ok=None,
         only_return_status_code=None,
         return_full_response=None,
-    ):   
+    ):
         if return_full_response:
             return response
         if only_return_ok:
             return response.ok
         if only_return_status_code:
             return response.status_code
-        return     response.json()[response_key]    
+        return     response.json()[response_key]
         """return \
         (
             response.json()[response_key]\
@@ -45,7 +45,7 @@ class Client(object):
         url=None,
         only_return_ok=None,
         only_return_status_code=None,
-        return_full_response=None,        
+        return_full_response=None,
         *args,
         **kwargs
         ):
@@ -57,18 +57,18 @@ class Client(object):
                 *args,
                 **kwargs
             ),
-            endpoint, 
+            endpoint,
             only_return_ok=only_return_ok,
             only_return_status_code=only_return_status_code,
             return_full_response=return_full_response,
         )
 
     def __init__(
-        self, 
-        client_id=None, 
-        client_secret=None, 
-        access_token=None, 
-        refresh_token=None, 
+        self,
+        client_id=None,
+        client_secret=None,
+        access_token=None,
+        refresh_token=None,
         token_expiration=None
     ):
         """
@@ -92,20 +92,20 @@ class Client(object):
         :return: Account data.
         :rtype: ``dict``
         """
-        endpoint = 'account'        
+        endpoint = 'account'
         return self._good_request(endpoint,only_return_ok=True)
-        
+
     def close_notification_channel(self, channel_id):
         """Close a notification channel to stop push notifications from being sent.
 
         :param string channel_id: The id of the notification channel.
         :rtype: ``int`` STATUS CODE
-        """                
+        """
         endpoint = 'channels/{0}'.format(channel_id)
         return self._good_request(endpoint, method='delete',only_return_status_code=True)
         #return self.request_handler.delete(endpoint = 'channels/{}'.format(channel_id)).status_code
 
-        
+
     def create_notification_channel(self, callback_url, calendar_ids=()):
         """Create a new channel for receiving push notifications.
 
@@ -119,7 +119,7 @@ class Client(object):
         data = {'callback_url': callback_url}
         if calendar_ids:
             data['filters'] = {'calendar_ids':calendar_ids}
-        return self._good_request(endpoint,method='post',data=data)        
+        return self._good_request(endpoint,method='post',data=data)
 
     def delete_all_events(self, calendar_ids=()):
         """Deletes all events managed through Cronofy from the all of the user's calendars.
@@ -127,7 +127,7 @@ class Client(object):
         :param tuple calendar_ids: List of calendar ids to delete events for. (Optional. Default empty tuple)
         """
         endpoint = 'events'
-        params = dict( delete_all = True ) if not len(calendar_ids) else {'calendar_ids[]': calendar_ids }            
+        params = dict( delete_all = True ) if not len(calendar_ids) else {'calendar_ids[]': calendar_ids }
         return self._good_request(endpoint,method='delete',params=params,only_return_status_code=True)
 
     def delete_event(self, calendar_id, event_id):
@@ -188,7 +188,7 @@ class Client(object):
         :rtype: ``list``
         """
         endpoint = 'calendars'
-        return self._good_request(endpoint=endpoint)        
+        return self._good_request(endpoint=endpoint)
 
     def list_profiles(self):
         """Get list of active user's calendar profiles.
@@ -197,7 +197,7 @@ class Client(object):
         :rtype: ``list``
         """
         endpoint = 'profiles'
-        return self._good_request(endpoint=endpoint)        
+        return self._good_request(endpoint=endpoint)
 
     def list_notification_channels(self):
         """Return a list of notification channels available for the active account.
@@ -212,14 +212,14 @@ class Client(object):
         events = [] if events is None else events
         endpoint = 'events'
         if current is None and total is None:
-            # on first run, so send initial request with query 
-            # params and set values for current, total and next        
+            # on first run, so send initial request with query
+            # params and set values for current, total and next
             response = self.read_events(return_full_response=True,**params)
-        else:                            
+        else:
             if current < total:
                 response = self._good_request(url=next.split("v1")[1],return_full_response=True)
             else:
-                return events                
+                return events
         data = response.json()
         data_events = data.get("events") if data.get("events") is not None else []
         page_data = data['pages']
@@ -227,7 +227,7 @@ class Client(object):
         next_page = page_data.get("next_page")
         events += data_events
         return self.get_all_events(current=current,total=total,next=next_page,events=events)
-            
+
 
     def read_events(self,
         calendar_ids=(),
@@ -361,7 +361,7 @@ class Client(object):
         event['end'] = get_iso8601_string(event['end'])
         endpoint = 'events'
         url = 'calendars/{}/events'.format(calendar_id)
-        return self._good_request(endpoint=endpoint, url=url, data=event, method="post", only_return_ok=True)        
+        return self._good_request(endpoint=endpoint, url=url, data=event, method="post", only_return_ok=True)
 
     def user_auth_link(self, redirect_uri, scope='', state='', avoid_linking=False):
         """Generates a URL to send the user for OAuth 2.0
@@ -409,4 +409,3 @@ if __name__ == "__main__":
     client = Client(access_token="RIp66VxLIumjJmNty2wGk81MSqSooDAP")
     params = dict(tzid=tzid,include_deleted=True)
     events = client.get_all_events(params=params)
-    print events     
